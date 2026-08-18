@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050508">
+<title>MANX — NODE RESIDUE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #050508; overflow: hidden;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    color: #c0c8d8; height: 100vh; height: 100dvh;
+    width: 100vw; position: fixed; touch-action: none;
+  }
+  #boot-layer {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; justify-content: center; align-items: center; background: #0a0a12;
+  }
+  #boot-layer.hidden { display: none; }
+  .crt {
+    position: fixed; inset: 0; pointer-events: none; z-index: 60;
+    background: linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.15) 50%),
+                linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03));
+    background-size: 100% 3px, 4px 100%;
+  }
+  #boot-screen {
+    width: 94vw; max-width: 720px; height: 70vh; max-height: 480px;
+    background: #0d0f18; border: 3px solid #2a3040;
+    box-shadow: 0 0 40px rgba(40,60,120,0.35), inset 0 0 60px rgba(0,0,0,0.7);
+    padding: 24px 28px; overflow: hidden;
+  }
+  #boot-out { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+  #boot-out .sys { color: #7a8cff; }
+  #boot-out .warn { color: #ff9a4a; }
+  #boot-out .ghost { color: #5a6a80; font-style: italic; }
+  #boot-out .ok { color: #4aff9a; }
+  #fade {
+    position: fixed; inset: 0; background: #000; opacity: 0;
+    pointer-events: none; z-index: 80; transition: opacity 0.9s ease;
+  }
+  #fade.active { opacity: 1; }
+  #canvas-container { position: fixed; inset: 0; display: none; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: fixed; top: 14px; left: 14px; z-index: 10;
+    font-size: 12px; color: #5a6a80; line-height: 1.6; display: none;
+  }
+  #hud .marsh { color: #c080a0; margin-top: 8px; max-width: 280px; }
+  #hud .item { color: #ffcc66; margin-top: 6px; }
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; width: 6px; height: 6px;
+    margin: -3px 0 0 -3px; border: 1px solid rgba(180,200,255,0.4);
+    border-radius: 50%; pointer-events: none; z-index: 10; display: none;
+  }
+  #hint {
+    position: fixed; bottom: 16%; left: 50%; transform: translateX(-50%);
+    background: rgba(10,12,20,0.9); border: 1px solid #3a4a6a;
+    padding: 10px 18px; font-size: 13px; color: #a0b8ff;
+    z-index: 10; display: none; pointer-events: none; text-align: center;
+  }
+  #level-banner {
+    position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%);
+    z-index: 25; text-align: center; display: none; pointer-events: none;
+  }
+  #level-banner.show { display: block; }
+  #level-banner h2 { color: #7a8cff; font-size: 22px; letter-spacing: 3px; margin-bottom: 8px; }
+  #level-banner p { color: #8a9ab0; font-size: 13px; }
+  #end-screen {
+    position: fixed; inset: 0; z-index: 100; display: none;
+    flex-direction: column; justify-content: center; align-items: center;
+    background: #050508; text-align: center; padding: 30px;
+  }
+  #end-screen.visible { display: flex; }
+  #end-screen h2 { color: #4aff9a; font-size: 26px; letter-spacing: 3px; margin-bottom: 14px; }
+  #end-screen p { color: #8a9ab0; font-size: 14px; max-width: 400px; line-height: 1.7; }
+  #mobile-controls {
+    position: fixed; inset: 0; pointer-events: none; z-index: 15; display: none;
+  }
+  #mobile-controls.visible { display: block; }
+  .joy-zone {
+    position: absolute; bottom: 28px; width: 120px; height: 120px;
+    pointer-events: auto; touch-action: none;
+  }
+  #joy-left { left: 20px; }
+  #joy-right { right: 20px; }
+  .joy-base {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: rgba(20,25,40,0.55); border: 2px solid rgba(100,120,180,0.35);
+    position: absolute; top: 10px; left: 10px;
+  }
+  .joy-stick {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: rgba(90,120,220,0.55); border: 2px solid rgba(140,170,255,0.6);
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  }
+  #jump-btn {
+    position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+    width: 70px; height: 70px; border-radius: 50%;
+    background: rgba(30,40,70,0.75); border: 2px solid #4a5aff;
+    color: #a0b8ff; font-family: inherit; font-size: 12px; letter-spacing: 1px;
+    pointer-events: auto; touch-action: none; z-index: 16;
+  }
+</style>
+</head>
+<body>
+
+<div id="boot-layer">
+  <div class="crt"></div>
+  <div id="boot-screen"><div id="boot-out"></div></div>
+</div>
+<div id="fade"></div>
+<div id="level-banner"><h2 id="banner-title"></h2><p id="banner-sub"></p></div>
+<div id="end-screen">
+  <h2>NODE RESOLVED</h2>
+  <p>K. Marsh falls silent. The residue is archived — not deleted.<br><br>You finished what the building refused to finish.</p>
+</div>
+
+<div id="canvas-container"></div>
+<div id="crosshair"></div>
+<div id="hud">
+  <span id="hud-level">LEVEL 1</span><br>
+  NODE RESIDUE // ACTIVE
+  <div class="item" id="item-line"></div>
+  <div class="marsh" id="marsh-line"></div>
+</div>
+<div id="hint">WASD move · SPACE jump · Mouse look</div>
+
+<div id="mobile-controls">
+  <div class="joy-zone" id="joy-left"><div class="joy-base"><div class="joy-stick" id="stick-left"></div></div></div>
+  <button id="jump-btn">JUMP</button>
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script>
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+const $ = id => document.getElementById(id);
+
+const LEVEL_META = {
+  1:  { name: 'ARCHIVE SPINE',      sub: 'Learn the mesh' },
+  2:  { name: 'LOCKED TRANSFER',    sub: 'Find the key' },
+  3:  { name: 'SHIFTING AISLE',     sub: 'Ride the moving platforms' },
+  4:  { name: 'NARROW FILING',      sub: 'Tight landings' },
+  5:  { name: 'SUSPENSION LINE',    sub: 'Grab the rope · swing · jump off' },
+  6:  { name: 'VERTICAL STACK',     sub: 'Climb the shaft' },
+  7:  { name: 'TWIN SEALS',         sub: 'Two keys, one door' },
+  8:  { name: 'DRIFT CORRIDOR',     sub: 'Push zones shove you' },
+  9:  { name: 'SCAN SWEEP',         sub: 'Avoid the search lights' },
+  10: { name: 'FINAL RESIDUE',      sub: 'Key, door, and the end' }
+};
+
+const bootLines = [
+  { t: 'MANX CO, LTD — SYSTEMS RESIDUE', c: 'sys' },
+  { t: 'Build 1992.11.03 // orphaned node', c: '' },
+  { t: '', c: '' },
+  { t: 'Loading continuity map ............... OK', c: 'ok' },
+  { t: 'Mounting archive volume .............. OK', c: 'ok' },
+  { t: 'WARNING: Presence detected.', c: 'warn' },
+  { t: '', c: '' },
+  { t: '> whoami', c: 'sys' },
+  { t: 'K.MARSH  //  STATUS: UNRESOLVED', c: 'ghost' },
+  { t: '', c: '' },
+  { t: 'Launching NODE RESIDUE ...............', c: 'sys' },
+];
+
+function runBoot() {
+  const out = $('boot-out');
+  let i = 0;
+  function next() {
+    if (i >= bootLines.length) { setTimeout(startGame, 700); return; }
+    const line = bootLines[i++];
+    const div = document.createElement('div');
+    if (line.c) div.className = line.c;
+    div.textContent = line.t || ' ';
+    out.appendChild(div);
+    out.scrollTop = out.scrollHeight;
+    setTimeout(next, line.t === '' ? 90 : 45 + Math.random() * 30);
+  }
+  next();
+}
+
+function startGame() {
+  $('fade').classList.add('active');
+  setTimeout(() => {
+    $('boot-layer').classList.add('hidden');
+    $('canvas-container').style.display = 'block';
+    $('hud').style.display = 'block';
+    if (!isTouch) {
+      $('crosshair').style.display = 'block';
+      $('hint').style.display = 'block';
+      setTimeout(() => { $('hint').style.display = 'none'; }, 6000);
+    }
+    $('fade').classList.remove('active');
+    init3D();
+    loadLevel(1);
+  }, 800);
+}
+
+function showBanner(title, sub, ms) {
+  $('banner-title').textContent = title;
+  $('banner-sub').textContent = sub || '';
+  $('level-banner').classList.add('show');
+  setTimeout(() => $('level-banner').classList.remove('show'), ms || 2200);
+}
+function setMarshLine(t) { $('marsh-line').textContent = t ? ('"' + t + '"') : ''; }
+
+// ===== 3D state =====
+let scene, camera, renderer, levelRoot;
+let velocity, onGround;
+let platforms = [];
+let movers = [];      // { platIndex, mesh, axis, min, max, speed, dir }
+let phantoms = [];    // { platIndex, mesh, timer, visible, cycle }
+let ropes = [];       // swinging ropes
+let activeRope = null;
+let drifts = [];      // { minX,maxX,minZ,maxZ, forceX, forceZ }
+let sweeps = [];      // { mesh, light, x, z, angle, speed, range }
+let pointerLocked = false;
+let currentLevel = 1;
+let hasKey = false, hasKey2 = false, keysNeeded = 0, keysGot = 0;
+let doorUnlocked = false;
+let goalPos = new THREE.Vector3();
+let keyMesh = null, keyMesh2 = null, doorMesh = null, goalMesh = null;
+let keyAnim = null;
+let levelCompleteLock = false;
+let spawnPos = new THREE.Vector3(0, 2, 6);
+const keys = { w:false, a:false, s:false, d:false, space:false };
+const clock = new THREE.Clock();
+const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+const PI_2 = Math.PI / 2;
+const mobile = { moveX:0, moveY:0, lookDX:0, lookDY:0 };
+let jumpPressed = false;
+let touchLookId = null;
+let touchLookLast = null;
+
+const MOVE_SPEED = 6.8, JUMP_FORCE = 10.2, GRAVITY = 18.5, PLAYER_H = 1.6, PLAYER_R = 0.38;
+
+function init3D() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x141824);
+  scene.fog = new THREE.Fog(0x141824, 18, 55);
+  camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.1, 90);
+  camera.position.set(0, PLAYER_H, 6);
+  renderer = new THREE.WebGLRenderer({ antialias: false });
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+  $('canvas-container').appendChild(renderer.domElement);
+
+  scene.add(new THREE.AmbientLight(0x5a6a88, 1.05));
+  const k = new THREE.PointLight(0x8aabff, 2.0, 45); k.position.set(0, 12, 4); scene.add(k);
+  const f = new THREE.PointLight(0xff8aba, 0.85, 30); f.position.set(-8, 6, -6); scene.add(f);
+
+  levelRoot = new THREE.Group(); scene.add(levelRoot);
+  velocity = new THREE.Vector3(); onGround = false;
+
+  window.addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.code==='KeyW') keys.w=true; if (e.code==='KeyA') keys.a=true;
+    if (e.code==='KeyS') keys.s=true; if (e.code==='KeyD') keys.d=true;
+    if (e.code==='Space') { keys.space=true; e.preventDefault(); }
+  });
+  document.addEventListener('keyup', e => {
+    if (e.code==='KeyW') keys.w=false; if (e.code==='KeyA') keys.a=false;
+    if (e.code==='KeyS') keys.s=false; if (e.code==='KeyD') keys.d=false;
+    if (e.code==='Space') keys.space=false;
+  });
+  document.addEventListener('pointerlockchange', () => {
+    pointerLocked = document.pointerLockElement === renderer.domElement;
+  });
+  document.addEventListener('mousemove', e => {
+    if (!pointerLocked) return;
+    euler.setFromQuaternion(camera.quaternion);
+    euler.y -= (e.movementX||0)*0.0022; euler.x -= (e.movementY||0)*0.0022;
+    euler.x = Math.max(-PI_2+0.1, Math.min(PI_2-0.1, euler.x));
+    camera.quaternion.setFromEuler(euler);
+  });
+  document.addEventListener('click', () => { if (!isTouch && renderer) renderer.domElement.requestPointerLock?.(); });
+  if (isTouch) setupMobile();
+  animate();
+}
+
+function clearLevel() {
+  while (levelRoot.children.length) levelRoot.remove(levelRoot.children[0]);
+  platforms = []; movers = []; phantoms = []; ropes = []; drifts = []; sweeps = [];
+  activeRope = null;
+  keyMesh = keyMesh2 = doorMesh = goalMesh = null; keyAnim = null;
+  hasKey = hasKey2 = doorUnlocked = false; keysNeeded = 0; keysGot = 0;
+  levelCompleteLock = false;
+  $('item-line').textContent = '';
+  $('item-line').style.opacity = '1';
+}
+
+function addPlatform(x, y, z, w, h, d, color) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(w, h, d),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.85 })
+  );
+  mesh.position.set(x, y, z);
+  levelRoot.add(mesh);
+  const p = { minX:x-w/2, maxX:x+w/2, minY:y-h/2, maxY:y+h/2, minZ:z-d/2, maxZ:z+d/2, mesh, active:true };
+  platforms.push(p);
+  return p;
+}
+
+function addMover(x, y, z, w, h, d, color, axis, min, max, speed) {
+  const p = addPlatform(x, y, z, w, h, d, color);
+  movers.push({ p, axis, min, max, speed, dir: 1 });
+  return p;
+}
+
+function addPhantom(x, y, z, w, h, d, color, cycle) {
+  const p = addPlatform(x, y, z, w, h, d, color);
+  p.mesh.material.transparent = true;
+  phantoms.push({ p, timer: Math.random()*cycle, cycle: cycle||3.5, visible: true });
+  return p;
+}
+
+function addRope(ax, ay, az, length, restAngle) {
+  // Anchor visual
+  const anchor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.25, 0.35),
+    new THREE.MeshStandardMaterial({ color: 0x4a5060, metalness: 0.5 })
+  );
+  anchor.position.set(ax, ay, az);
+  levelRoot.add(anchor);
+
+  // Rope line (cylinder from anchor downward)
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0xc4a574, roughness: 0.7 });
+  const ropeMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.04, 0.04, length, 6),
+    ropeMat
+  );
+  levelRoot.add(ropeMesh);
+
+  // Grab handle at bottom
+  const handle = new THREE.Mesh(
+    new THREE.SphereGeometry(0.22, 10, 10),
+    new THREE.MeshStandardMaterial({ color: 0xffcc66, metalness: 0.4, roughness: 0.5 })
+  );
+  levelRoot.add(handle);
+  const hLight = new THREE.PointLight(0xffcc66, 0.6, 4);
+  levelRoot.add(hLight);
+
+  const rope = {
+    ax, ay, az, length,
+    angle: restAngle || 0.35,
+    omega: 0,
+    mesh: ropeMesh,
+    handle,
+    hLight,
+    grabbed: false
+  };
+  ropes.push(rope);
+  updateRopeVisual(rope);
+  return rope;
+}
+
+function updateRopeVisual(r) {
+  // Pendulum in XZ plane swinging mainly along Z (forward) with angle from vertical
+  const hx = r.ax + Math.sin(r.angle) * r.length;
+  const hy = r.ay - Math.cos(r.angle) * r.length;
+  const hz = r.az;
+  // rope mid point
+  r.mesh.position.set((r.ax + hx) / 2, (r.ay + hy) / 2, (r.az + hz) / 2);
+  r.mesh.lookAt(hx, hy, hz);
+  r.mesh.rotateX(Math.PI / 2);
+  r.handle.position.set(hx, hy, hz);
+  r.hLight.position.set(hx, hy, hz);
+}
+
+function addDrift(minX, maxX, minZ, maxZ, forceX, forceZ) {
+  drifts.push({ minX, maxX, minZ, maxZ, forceX, forceZ });
+  // visual strip
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(maxX-minX, 0.05, maxZ-minZ),
+    new THREE.MeshBasicMaterial({ color: 0x3a5080, transparent: true, opacity: 0.35 })
+  );
+  m.position.set((minX+maxX)/2, 0.08, (minZ+maxZ)/2);
+  levelRoot.add(m);
+}
+
+function addSweep(x, z, speed, range) {
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.5, 1.4, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0x2a3040 })
+  );
+  body.position.set(x, 0.9, z);
+  levelRoot.add(body);
+  const light = new THREE.SpotLight(0xffeebb, 1.2, 10, Math.PI/8, 0.4, 1);
+  light.position.set(x, 1.5, z);
+  const tgt = new THREE.Object3D(); tgt.position.set(x, 1, z-5); levelRoot.add(tgt);
+  light.target = tgt; levelRoot.add(light);
+  sweeps.push({ body, light, tgt, x, z, angle: 0, speed, range });
+}
+
+function addKeyAt(x, y, z, which) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.12, 0.08),
+    new THREE.MeshStandardMaterial({ color: which===2 ? 0x66ffcc : 0xffcc44, metalness: 0.7, roughness: 0.3 })
+  );
+  mesh.position.set(x, y, z);
+  levelRoot.add(mesh);
+  const kl = new THREE.PointLight(which===2 ? 0x66ffcc : 0xffcc44, 1.0, 6);
+  kl.position.set(x, y+0.4, z); levelRoot.add(kl);
+  if (which === 2) keyMesh2 = mesh; else keyMesh = mesh;
+}
+
+function addDoorAt(x, y, z) {
+  doorMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(3.2, 3.2, 0.35),
+    new THREE.MeshStandardMaterial({ color: 0x2a2030, metalness: 0.4, roughness: 0.55 })
+  );
+  doorMesh.position.set(x, y, z);
+  levelRoot.add(doorMesh);
+  const frame = new THREE.Mesh(
+    new THREE.BoxGeometry(4, 3.6, 0.25),
+    new THREE.MeshStandardMaterial({ color: 0x1a1520 })
+  );
+  frame.position.set(x, y, z - 0.3);
+  levelRoot.add(frame);
+}
+
+function addGoalAt(x, y, z) {
+  goalPos.set(x, y, z);
+  goalMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(0.55, 1.1, 0.55),
+    new THREE.MeshBasicMaterial({ color: 0x7a8cff })
+  );
+  goalMesh.position.copy(goalPos);
+  levelRoot.add(goalMesh);
+  const gl = new THREE.PointLight(0x7a8cff, 1.4, 10);
+  gl.position.copy(goalPos); levelRoot.add(gl);
+}
+
+function addWalls(zEnd) {
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x12151c, roughness: 0.9 });
+  [[-14, 8, zEnd/2, 0.4, 18, Math.abs(zEnd)+24],
+   [14, 8, zEnd/2, 0.4, 18, Math.abs(zEnd)+24],
+   [0, 8, zEnd-3, 32, 18, 0.4]].forEach(d => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(d[3], d[4], d[5]), wallMat);
+    w.position.set(d[0], d[1], d[2]); levelRoot.add(w);
+  });
+}
+
+function loadLevel(n) {
+  clearLevel();
+  currentLevel = n;
+  velocity.set(0, 0, 0);
+  const meta = LEVEL_META[n] || { name: 'UNKNOWN', sub: '' };
+  $('hud-level').textContent = 'LEVEL ' + n + ' — ' + meta.name;
+  showBanner('LEVEL ' + n, meta.sub, 2300);
+
+  if (n === 1) {
+    setMarshLine('Follow the spine. Don\'t look down.');
+    addPlatform(0, 0, 5, 12, 0.4, 10, 0x3a4258);
+    addPlatform(-3, 1.1, -2, 4, 0.3, 3, 0x5a6a88);
+    addPlatform(3, 2.0, -5, 3.5, 0.3, 3, 0x5a6a88);
+    addPlatform(-2, 3.0, -9, 3.5, 0.3, 3, 0x6a5a78);
+    addPlatform(3.5, 4.0, -13, 3.2, 0.3, 2.8, 0x5a6a88);
+    addPlatform(-1, 5.0, -17, 4, 0.3, 3, 0x5a7088);
+    addPlatform(2, 6.0, -21, 3.5, 0.3, 3, 0x5a6a88);
+    addPlatform(0, 7.0, -25, 5, 0.35, 3.5, 0x7a5a88);
+    addGoalAt(0, 7.8, -25); addWalls(-28);
+    spawnPos.set(0, PLAYER_H+0.3, 7);
+  }
+  else if (n === 2) {
+    setMarshLine('The exit is sealed. Find my key.');
+    keysNeeded = 1;
+    addPlatform(0, 0, 4, 12, 0.4, 10, 0x3a4258);
+    addPlatform(-5, 1.0, -2, 4, 0.3, 3, 0x5a6a88);
+    addPlatform(-7, 2.0, -6, 3.5, 0.3, 3, 0x5a6a88);
+    addPlatform(-5, 3.0, -10, 3.5, 0.3, 3, 0x6a5a78);
+    addPlatform(-7, 4.0, -14, 4, 0.3, 3.5, 0x5a7088);
+    addKeyAt(-7, 4.55, -14, 1);
+    addPlatform(4, 1.0, -2, 4, 0.3, 3, 0x5a6a88);
+    addPlatform(5, 2.0, -6, 3.5, 0.3, 3, 0x5a6a88);
+    addPlatform(2, 3.0, -10, 4, 0.3, 3, 0x5a6a88);
+    addPlatform(0, 4.0, -14, 5, 0.3, 3, 0x5a7088);
+    addPlatform(0, 5.0, -18, 5, 0.35, 3.5, 0x5a6a88);
+    addDoorAt(0, 6.6, -20.2);
+    addPlatform(0, 5.0, -24, 6, 0.4, 4, 0x7a5a88);
+    addGoalAt(0, 5.9, -24); addWalls(-28);
+    spawnPos.set(0, PLAYER_H+0.3, 6);
+  }
+  else if (n === 3) {
+    setMarshLine('The aisle moves. Time your steps.');
+    addPlatform(0, 0, 4, 10, 0.4, 8, 0x3a4258);
+    addMover(0, 1.2, -2, 3.5, 0.3, 2.5, 0x5a8a88, 'x', -5, 5, 2.2);
+    addPlatform(0, 2.2, -6, 3, 0.3, 2.5, 0x5a6a88);
+    addMover(0, 3.2, -10, 3.2, 0.3, 2.5, 0x5a8a88, 'x', -4.5, 4.5, 2.8);
+    addPlatform(0, 4.2, -14, 3.5, 0.3, 2.5, 0x5a6a88);
+    addMover(0, 5.2, -18, 3, 0.3, 2.5, 0x5a8a88, 'x', -4, 4, 2.5);
+    addPlatform(0, 6.2, -22, 5, 0.35, 3, 0x7a5a88);
+    addGoalAt(0, 7.0, -22); addWalls(-26);
+    spawnPos.set(0, PLAYER_H+0.3, 6);
+  }
+  else if (n === 4) {
+    setMarshLine('Narrow. Commit to each jump.');
+    addPlatform(0, 0, 4, 8, 0.4, 6, 0x3a4258);
+    addPlatform(-2, 1.0, -1, 2.2, 0.28, 2.0, 0x5a6a88);
+    addPlatform(2.5, 1.9, -4, 2.0, 0.28, 1.8, 0x5a6a88);
+    addPlatform(-2.5, 2.8, -7, 2.0, 0.28, 1.8, 0x6a5a78);
+    addPlatform(2, 3.7, -10, 1.9, 0.28, 1.7, 0x5a6a88);
+    addPlatform(-1.5, 4.6, -13, 2.1, 0.28, 1.8, 0x5a7088);
+    addPlatform(2.2, 5.5, -16, 2.0, 0.28, 1.8, 0x5a6a88);
+    addPlatform(0, 6.4, -19, 4, 0.35, 2.5, 0x7a5a88);
+    addGoalAt(0, 7.2, -19); addWalls(-24);
+    spawnPos.set(0, PLAYER_H+0.3, 5);
+  }
+  else if (n === 5) {
+    setMarshLine('Grab the gold handle. Swing. Jump off at the peak.');
+    // Start
+    addPlatform(0, 0, 5, 10, 0.4, 8, 0x3a4258);
+    // Rope 1 — swing forward
+    addRope(0, 6.5, -2, 5.0, 0.5);
+    // Mid landing
+    addPlatform(0, 1.5, -8, 4, 0.3, 3, 0x5a6a88);
+    // Rope 2
+    addRope(0, 7.5, -11, 5.2, -0.45);
+    // Landing toward goal
+    addPlatform(0, 2.5, -17, 4, 0.3, 3, 0x5a7088);
+    // Rope 3 optional / final gap
+    addRope(0, 8.0, -20, 5.0, 0.4);
+    // Goal
+    addPlatform(0, 3.2, -26, 5, 0.35, 3.5, 0x7a5a88);
+    addGoalAt(0, 4.0, -26); addWalls(-30);
+    spawnPos.set(0, PLAYER_H+0.3, 6);
+  }
+  else if (n === 6) {
+    setMarshLine('Up. Only up.');
+    addPlatform(0, 0, 0, 6, 0.4, 6, 0x3a4258);
+    for (let i = 0; i < 8; i++) {
+      const side = (i % 2 === 0) ? -2.2 : 2.2;
+      addPlatform(side, 1.1 + i * 1.15, -2 - i * 0.3, 3.0, 0.28, 2.2, 0x5a6a88);
+    }
+    addPlatform(0, 10.3, -4, 4, 0.35, 3, 0x7a5a88);
+    addGoalAt(0, 11.1, -4); addWalls(-12);
+    spawnPos.set(0, PLAYER_H+0.3, 2);
+  }
+  else if (n === 7) {
+    setMarshLine('Two seals. Both required.');
+    keysNeeded = 2;
+    addPlatform(0, 0, 4, 12, 0.4, 8, 0x3a4258);
+    // left key
+    addPlatform(-5, 1.2, -2, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(-7, 2.4, -6, 3.2, 0.3, 2.5, 0x5a6a88);
+    addPlatform(-6, 3.6, -10, 3.5, 0.3, 2.8, 0x5a7088);
+    addKeyAt(-6, 4.15, -10, 1);
+    // right key
+    addPlatform(5, 1.2, -2, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(7, 2.4, -6, 3.2, 0.3, 2.5, 0x5a6a88);
+    addPlatform(6, 3.6, -10, 3.5, 0.3, 2.8, 0x5a7088);
+    addKeyAt(6, 4.15, -10, 2);
+    // door path
+    addPlatform(0, 1.5, -6, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(0, 3.0, -11, 4, 0.3, 2.5, 0x5a6a88);
+    addPlatform(0, 4.5, -15, 4.5, 0.35, 3, 0x5a6a88);
+    addDoorAt(0, 6.1, -17.5);
+    addPlatform(0, 4.5, -21, 5, 0.4, 3.5, 0x7a5a88);
+    addGoalAt(0, 5.4, -21); addWalls(-26);
+    spawnPos.set(0, PLAYER_H+0.3, 6);
+  }
+  else if (n === 8) {
+    setMarshLine('The corridor pushes. Fight the drift.');
+    addPlatform(0, 0, 4, 10, 0.4, 6, 0x3a4258);
+    addPlatform(0, 0.8, -1, 4, 0.3, 3, 0x5a6a88);
+    addDrift(-3, 3, -5, -2, 3.5, 0);
+    addPlatform(0, 1.6, -6, 3.5, 0.3, 2.5, 0x5a6a88);
+    addDrift(-3, 3, -10, -7, -3.5, 0);
+    addPlatform(0, 2.5, -11, 3.5, 0.3, 2.5, 0x5a6a88);
+    addDrift(-3, 3, -15, -12, 0, -2.5);
+    addPlatform(0, 3.5, -16, 3.5, 0.3, 2.5, 0x5a7088);
+    addPlatform(0, 4.5, -20, 5, 0.35, 3, 0x7a5a88);
+    addGoalAt(0, 5.3, -20); addWalls(-24);
+    spawnPos.set(0, PLAYER_H+0.3, 5);
+  }
+  else if (n === 9) {
+    setMarshLine('Lights are hunting. Stay out of the beam.');
+    addPlatform(0, 0, 4, 12, 0.4, 8, 0x3a4258);
+    addPlatform(-4, 1.0, -2, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(0, 1.8, -5, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(4, 2.6, -8, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(0, 3.4, -11, 3.5, 0.3, 2.5, 0x5a7088);
+    addPlatform(-3, 4.2, -14, 3.5, 0.3, 2.5, 0x5a6a88);
+    addPlatform(0, 5.0, -18, 5, 0.35, 3, 0x7a5a88);
+    addSweep(-2, -4, 1.1, 2.5);
+    addSweep(3, -10, 1.4, 2.2);
+    addSweep(-1, -15, 1.0, 2.0);
+    addGoalAt(0, 5.8, -18); addWalls(-24);
+    spawnPos.set(0, PLAYER_H+0.3, 6);
+  }
+  else if (n === 10) {
+    setMarshLine('Last seal. Take the key. End this.');
+    keysNeeded = 1;
+    addPlatform(0, 0, 5, 12, 0.4, 8, 0x3a4258);
+    addPlatform(-4, 1.2, -1, 3.2, 0.3, 2.5, 0x5a6a88);
+    addMover(0, 2.2, -5, 3.0, 0.3, 2.2, 0x5a8a88, 'x', -4, 4, 2.4);
+    addPhantom(3, 3.3, -9, 2.8, 0.28, 2.0, 0x6a7a9a, 3.0);
+    addPlatform(-4, 4.3, -12, 3.2, 0.3, 2.5, 0x5a7088);
+    addKeyAt(-4, 4.85, -12, 1);
+    addPlatform(3, 4.3, -12, 3.0, 0.3, 2.5, 0x5a6a88);
+    addPlatform(0, 5.3, -16, 4, 0.3, 2.5, 0x5a6a88);
+    addDoorAt(0, 6.9, -18.5);
+    addPlatform(0, 5.3, -22, 5, 0.4, 3.5, 0x7a5a88);
+    addGoalAt(0, 6.2, -22); addWalls(-28);
+    spawnPos.set(0, PLAYER_H+0.3, 7);
+  }
+
+  camera.position.copy(spawnPos);
+}
+
+function updateMovers(delta) {
+  movers.forEach(m => {
+    const mesh = m.p.mesh;
+    const pos = mesh.position[m.axis];
+    let next = pos + m.dir * m.speed * delta;
+    if (next > m.max) { next = m.max; m.dir = -1; }
+    if (next < m.min) { next = m.min; m.dir = 1; }
+    const deltaMove = next - pos;
+    mesh.position[m.axis] = next;
+    // update collision bounds
+    const w = m.p.maxX - m.p.minX, d = m.p.maxZ - m.p.minZ, h = m.p.maxY - m.p.minY;
+    m.p.minX = mesh.position.x - w/2; m.p.maxX = mesh.position.x + w/2;
+    m.p.minY = mesh.position.y - h/2; m.p.maxY = mesh.position.y + h/2;
+    m.p.minZ = mesh.position.z - d/2; m.p.maxZ = mesh.position.z + d/2;
+    // carry player
+    if (onGround && camera.position.x > m.p.minX && camera.position.x < m.p.maxX &&
+        camera.position.z > m.p.minZ && camera.position.z < m.p.maxZ &&
+        Math.abs((camera.position.y - PLAYER_H) - m.p.maxY) < 0.15) {
+      camera.position[m.axis] += deltaMove;
+    }
+  });
+}
+
+function updatePhantoms(delta) {
+  phantoms.forEach(ph => {
+    ph.timer += delta;
+    const half = ph.cycle / 2;
+    const vis = (ph.timer % ph.cycle) < half;
+    ph.p.active = vis;
+    ph.p.mesh.visible = vis;
+    ph.p.mesh.material.opacity = vis ? 0.95 : 0.15;
+  });
+}
+
+function updateRopes(delta) {
+  ropes.forEach(r => {
+    if (r === activeRope) {
+      // Player input swings the rope
+      let input = 0;
+      if (!isTouch) {
+        if (keys.a) input -= 1;
+        if (keys.d) input += 1;
+        // also use look-forward relative: W pumps slightly
+        if (keys.w) input += Math.sign(r.angle || 0.01) * 0.35;
+      } else {
+        input += mobile.moveX * 1.4;
+      }
+      r.omega += input * 3.5 * delta;
+      // Pendulum physics
+      r.omega += - (14 / r.length) * Math.sin(r.angle) * delta;
+      r.omega *= (1 - 0.35 * delta); // damping
+      r.angle += r.omega * delta;
+      // clamp
+      r.angle = Math.max(-1.15, Math.min(1.15, r.angle));
+      updateRopeVisual(r);
+      // Attach player to handle
+      camera.position.copy(r.handle.position);
+      camera.position.y += 0.15;
+      velocity.set(0, 0, 0);
+      onGround = false;
+    } else {
+      // Idle gentle sway
+      r.angle = (r.angle || 0.3) * 0.999 + Math.sin(performance.now()/900 + r.ax) * 0.002;
+      r.omega *= 0.98;
+      updateRopeVisual(r);
+    }
+  });
+}
+
+function tryGrabOrReleaseRope() {
+  if (activeRope) {
+    // Release: launch along tangent
+    const r = activeRope;
+    const tangentX = Math.cos(r.angle) * r.omega * r.length;
+    const tangentY = Math.sin(r.angle) * r.omega * r.length;
+    velocity.x = tangentX * 0.55;
+    velocity.y = Math.max(2.5, tangentY * 0.35 + 4.5);
+    velocity.z = -Math.abs(r.omega) * r.length * 0.35 - 3.5; // push forward through course
+    // Face-ish forward
+    activeRope.grabbed = false;
+    activeRope = null;
+    setMarshLine('Jump off at the peak.');
+    return;
+  }
+  // Grab nearest handle
+  let best = null, bestDist = 2.0;
+  ropes.forEach(r => {
+    const d = camera.position.distanceTo(r.handle.position);
+    if (d < bestDist) { bestDist = d; best = r; }
+  });
+  if (best) {
+    activeRope = best;
+    best.grabbed = true;
+    best.omega = best.omega || 0.4;
+    setMarshLine('A / D to swing · JUMP to let go');
+  }
+}
+
+function updateSweeps(delta) {
+  sweeps.forEach(s => {
+    s.angle += s.speed * delta;
+    const fx = -Math.sin(s.angle);
+    const fz = -Math.cos(s.angle);
+    s.body.rotation.y = s.angle;
+    s.tgt.position.set(s.x + fx * 6, 1.2, s.z + fz * 6);
+    // detect player in cone
+    const dx = camera.position.x - s.x;
+    const dz = camera.position.z - s.z;
+    const dist = Math.sqrt(dx*dx + dz*dz);
+    if (dist < 7 && dist > 0.3) {
+      const nx = dx/dist, nz = dz/dist;
+      const dot = fx*nx + fz*nz;
+      if (dot > 0.88) {
+        // spotted — soft reset
+        camera.position.copy(spawnPos);
+        velocity.set(0, 0, 0);
+        setMarshLine('Seen. Back to the start of this node.');
+      }
+    }
+  });
+}
+
+function tryPickupKeys() {
+  function pickup(mesh, flagSetter) {
+    if (!mesh || !mesh.visible || keyAnim) return false;
+    if (camera.position.distanceTo(mesh.position) < 1.8) {
+      keyAnim = { t: 0, duration: 0.85, startY: mesh.position.y, mesh };
+      mesh.material.transparent = true; mesh.material.opacity = 1;
+      keysGot++;
+      flagSetter();
+      $('item-line').textContent = keysNeeded > 1
+        ? `KEYS: ${keysGot} / ${keysNeeded}`
+        : 'ITEM: FACILITY KEY';
+      $('item-line').style.opacity = '0';
+      setMarshLine(keysGot >= keysNeeded ? 'Seals complete. Open the door.' : 'One more seal remains.');
+      return true;
+    }
+    return false;
+  }
+  if (!hasKey) pickup(keyMesh, () => { hasKey = true; });
+  if (!hasKey2) pickup(keyMesh2, () => { hasKey2 = true; });
+}
+
+function updateKeyPickup(delta) {
+  if (!keyAnim || !keyAnim.mesh) return;
+  const mesh = keyAnim.mesh;
+  keyAnim.t += delta;
+  const u = Math.min(1, keyAnim.t / keyAnim.duration);
+  const e = 1 - Math.pow(1 - u, 3);
+  mesh.position.y = keyAnim.startY + e * 1.4;
+  mesh.rotation.y += delta * (2 + e * 10);
+  mesh.scale.setScalar(Math.max(0.05, 1 + e * 0.4 - e * e * 1.2));
+  mesh.material.opacity = 1 - e;
+  $('item-line').style.opacity = String(e);
+  if (u >= 1) {
+    mesh.visible = false;
+    keyAnim = null;
+    $('item-line').style.opacity = '1';
+  }
+}
+
+function tryUnlockDoor() {
+  if (!doorMesh || doorUnlocked) return;
+  if (camera.position.distanceTo(doorMesh.position) < 2.8) {
+    if (keysGot < keysNeeded) {
+      setMarshLine(keysNeeded > 1 ? `Need ${keysNeeded - keysGot} more key(s).` : 'Locked. You need the key.');
+      return;
+    }
+    doorUnlocked = true;
+    doorMesh.visible = false;
+    setMarshLine('The seal releases. Go.');
+  }
+}
+
+function completeLevel() {
+  if (levelCompleteLock) return;
+  if (currentLevel === 2 || currentLevel === 7 || currentLevel === 10) {
+    if (!doorUnlocked) return;
+  }
+  levelCompleteLock = true;
+  if (currentLevel >= 10) {
+    setMarshLine('Thank you for finishing this.');
+    showBanner('NODE RESOLVED', 'Marsh falls silent.', 2000);
+    setTimeout(() => {
+      $('end-screen').classList.add('visible');
+      document.exitPointerLock?.();
+    }, 1500);
+    return;
+  }
+  const next = currentLevel + 1;
+  setMarshLine('Node fragment cleared...');
+  showBanner('LEVEL ' + currentLevel + ' CLEAR', 'Loading Level ' + next + '...', 1600);
+  $('fade').classList.add('active');
+  setTimeout(() => {
+    loadLevel(next);
+    $('fade').classList.remove('active');
+  }, 1100);
+}
+
+function setupMobile() {
+  $('mobile-controls').classList.add('visible');
+  $('hint').style.display = 'none';
+  const left = $('joy-left');
+  const sL = $('stick-left');
+
+  function handleMove(zone, stick, e) {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    const r = zone.getBoundingClientRect();
+    let dx = t.clientX - (r.left + r.width/2);
+    let dy = t.clientY - (r.top + r.height/2);
+    const max = 38, len = Math.sqrt(dx*dx+dy*dy);
+    if (len > max) { dx = dx/len*max; dy = dy/len*max; }
+    stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    mobile.moveX = dx/max; mobile.moveY = dy/max;
+  }
+  function endMove(stick) {
+    stick.style.transform = 'translate(-50%,-50%)';
+    mobile.moveX = 0; mobile.moveY = 0;
+  }
+  left.addEventListener('touchstart', e => handleMove(left, sL, e), {passive:false});
+  left.addEventListener('touchmove', e => handleMove(left, sL, e), {passive:false});
+  left.addEventListener('touchend', () => endMove(sL));
+  left.addEventListener('touchcancel', () => endMove(sL));
+
+  $('jump-btn').addEventListener('touchstart', e => { e.preventDefault(); jumpPressed=true; }, {passive:false});
+  $('jump-btn').addEventListener('touchend', () => { jumpPressed=false; });
+
+  // Drag anywhere else on screen to look
+  function isUITouch(t) {
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if (!el) return false;
+    return !!(el.closest('#joy-left') || el.closest('#jump-btn') || el.closest('#mobile-controls .joy-zone'));
+  }
+  document.addEventListener('touchstart', e => {
+    for (const t of e.changedTouches) {
+      if (isUITouch(t)) continue;
+      if (touchLookId === null) {
+        touchLookId = t.identifier;
+        touchLookLast = { x: t.clientX, y: t.clientY };
+      }
+    }
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (touchLookId === null) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier !== touchLookId) continue;
+      const dx = t.clientX - touchLookLast.x;
+      const dy = t.clientY - touchLookLast.y;
+      touchLookLast = { x: t.clientX, y: t.clientY };
+      mobile.lookDX += dx;
+      mobile.lookDY += dy;
+      e.preventDefault();
+    }
+  }, {passive:false});
+  document.addEventListener('touchend', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchLookId) {
+        touchLookId = null;
+        touchLookLast = null;
+      }
+    }
+  });
+  document.addEventListener('touchcancel', e => {
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchLookId) {
+        touchLookId = null;
+        touchLookLast = null;
+      }
+    }
+  });
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (!camera || $('end-screen').classList.contains('visible')) return;
+  const delta = Math.min(clock.getDelta(), 0.05);
+
+  updateMovers(delta);
+  updatePhantoms(delta);
+  updateRopes(delta);
+  updateSweeps(delta);
+  if (keyAnim) updateKeyPickup(delta);
+  else {
+    if (keyMesh && keyMesh.visible) {
+      keyMesh.rotation.y += delta * 2;
+      keyMesh.position.y = keyMesh.position.y; // bob handled per level base
+    }
+    if (keyMesh2 && keyMesh2.visible) keyMesh2.rotation.y += delta * 2;
+  }
+
+  if (isTouch && (mobile.lookDX || mobile.lookDY)) {
+    euler.setFromQuaternion(camera.quaternion);
+    euler.y -= mobile.lookDX * 0.0045;
+    euler.x -= mobile.lookDY * 0.0045;
+    euler.x = Math.max(-1.2, Math.min(1.2, euler.x));
+    camera.quaternion.setFromEuler(euler);
+    mobile.lookDX = 0;
+    mobile.lookDY = 0;
+  }
+
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward); forward.y = 0; forward.normalize();
+  const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0,1,0)).normalize();
+  let mx = 0, mz = 0;
+  if (!isTouch) {
+    if (keys.w) { mx += forward.x; mz += forward.z; }
+    if (keys.s) { mx -= forward.x; mz -= forward.z; }
+    if (keys.a) { mx -= right.x; mz -= right.z; }
+    if (keys.d) { mx += right.x; mz += right.z; }
+  } else {
+    mx = forward.x * (-mobile.moveY) + right.x * mobile.moveX;
+    mz = forward.z * (-mobile.moveY) + right.z * mobile.moveX;
+  }
+  const len = Math.sqrt(mx*mx + mz*mz);
+  if (len > 0.01) { mx = (mx/len)*MOVE_SPEED*delta; mz = (mz/len)*MOVE_SPEED*delta; }
+  else { mx = 0; mz = 0; }
+
+  // Drift forces
+  drifts.forEach(d => {
+    if (camera.position.x > d.minX && camera.position.x < d.maxX &&
+        camera.position.z > d.minZ && camera.position.z < d.maxZ) {
+      mx += d.forceX * delta; mz += d.forceZ * delta;
+    }
+  });
+
+  // Jump: grab/release rope, or normal jump
+  if (keys.space || jumpPressed) {
+    if (activeRope || ropes.some(r => camera.position.distanceTo(r.handle.position) < 2.0)) {
+      if (!tryGrabOrReleaseRope._latched) {
+        tryGrabOrReleaseRope();
+        tryGrabOrReleaseRope._latched = true;
+      }
+    } else if (onGround && !activeRope) {
+      velocity.y = JUMP_FORCE; onGround = false;
+    }
+  } else {
+    tryGrabOrReleaseRope._latched = false;
+  }
+
+  if (activeRope) {
+    // movement handled in updateRopes
+    renderer.render(scene, camera);
+    return;
+  }
+
+  velocity.y -= GRAVITY * delta;
+
+  let nx = camera.position.x + mx + velocity.x * delta;
+  let ny = camera.position.y + velocity.y * delta;
+  let nz = camera.position.z + mz + (velocity.z || 0) * delta;
+  // damp horizontal launch from rope
+  velocity.x *= (1 - 1.5 * delta);
+  velocity.z *= (1 - 1.5 * delta);
+
+  if (doorMesh && !doorUnlocked && doorMesh.visible) {
+    const dx = nx - doorMesh.position.x;
+    if (Math.abs(dx) < 1.8 && nz < doorMesh.position.z + 0.6 && camera.position.z >= doorMesh.position.z + 0.5) {
+      nz = doorMesh.position.z + 0.65;
+      tryUnlockDoor();
+    }
+  }
+
+  onGround = false;
+  const feetY = ny - PLAYER_H;
+  for (const p of platforms) {
+    if (!p.active) continue;
+    if (nx+PLAYER_R > p.minX && nx-PLAYER_R < p.maxX && nz+PLAYER_R > p.minZ && nz-PLAYER_R < p.maxZ) {
+      if (velocity.y <= 0 && feetY <= p.maxY + 0.08 && feetY >= p.maxY - 0.55) {
+        ny = p.maxY + PLAYER_H; velocity.y = 0; onGround = true;
+      }
+      if (velocity.y > 0 && ny > p.minY && camera.position.y <= p.minY + 0.1) {
+        ny = p.minY - 0.05; velocity.y = 0;
+      }
+    }
+  }
+  camera.position.set(nx, ny, nz);
+
+  if (camera.position.y < -10) {
+    camera.position.copy(spawnPos); velocity.set(0,0,0);
+    setMarshLine('Again. The node resets you.');
+  }
+
+  tryPickupKeys();
+  if (keysGot >= keysNeeded && keysNeeded > 0 && !doorUnlocked) tryUnlockDoor();
+
+  if (goalMesh && camera.position.distanceTo(goalPos) < 2.5) completeLevel();
+
+  renderer.render(scene, camera);
+}
+
+runBoot();
+</script>
+</body>
+</html>
